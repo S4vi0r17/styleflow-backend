@@ -1,5 +1,6 @@
 import { createMiddleware } from 'hono/factory';
 import { verify } from 'hono/jwt';
+import { env } from '../env.ts';
 import type { AppEnv } from '../types.ts';
 
 /**
@@ -13,11 +14,9 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   }
 
   const token = header.slice('Bearer '.length);
-  const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error('JWT_SECRET no está definida');
 
   try {
-    const payload = await verify(token, secret, 'HS256');
+    const payload = await verify(token, env.JWT_SECRET, 'HS256');
     c.set('userId', payload.sub as string);
     await next();
   } catch {

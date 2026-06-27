@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { logger } from 'hono/logger';
+import { env } from './env.ts';
 import { onError } from './middleware/error.ts';
 import { authRoutes } from './routes/auth.ts';
 import { profileRoutes } from './routes/profile.ts';
@@ -29,6 +30,6 @@ api.route('/recommendations', recommendationRoutes);
 app.route('/api/v1', api);
 
 export default {
-  port: Number(process.env.PORT ?? 3000),
+  port: env.PORT,
   fetch: app.fetch,
 };
