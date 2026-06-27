@@ -1,0 +1,30 @@
+# Solo para desarrollo local: levanta Postgres y MinIO.
+# Uso:  docker compose up -d   (luego corre la API con `bun run dev`)
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: styleflow
+      POSTGRES_PASSWORD: styleflow
+      POSTGRES_DB: styleflow
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: styleflow
+      MINIO_ROOT_PASSWORD: styleflow123
+    ports:
+      - '9000:9000' # API S3
+      - '9001:9001' # Consola web
+    volumes:
+      - miniodata:/data
+
+volumes:
+  pgdata:
+  miniodata:
