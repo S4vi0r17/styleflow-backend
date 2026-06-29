@@ -1,6 +1,3 @@
-# Solo para desarrollo local: levanta Postgres y MinIO.
-# Uso:  docker compose up -d   (luego corre la API con `bun run dev`)
-
 services:
   postgres:
     image: postgres:18-alpine
@@ -9,7 +6,7 @@ services:
       POSTGRES_PASSWORD: styleflow
       POSTGRES_DB: styleflow
     ports:
-      - '5432:5432'
+      - '5435:5432'
     volumes:
       - pgdata:/var/lib/postgresql
 
