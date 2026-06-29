@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { ApiError } from '../lib/errors.ts';
 import { authMiddleware } from '../middleware/auth.ts';
 import type { AppEnv } from '../types.ts';
 
@@ -8,7 +9,11 @@ export const profileRoutes = new Hono<AppEnv>();
 profileRoutes.use('*', authMiddleware);
 
 // TODO: GET /api/v1/profile -> { profile }
-profileRoutes.get('/', (c) => c.json({ error: 'No implementado aún (Fase 2)' }, 501));
+profileRoutes.get('/', () => {
+  throw new ApiError(501, 'No implementado aún (Fase 2)');
+});
 
 // TODO: PUT /api/v1/profile { sizes, occasions, goals, favoriteColors, defaultLat, defaultLon } -> { profile }
-profileRoutes.put('/', (c) => c.json({ error: 'No implementado aún (Fase 2)' }, 501));
+profileRoutes.put('/', () => {
+  throw new ApiError(501, 'No implementado aún (Fase 2)');
+});

@@ -1,6 +1,7 @@
 import { createMiddleware } from 'hono/factory';
 import { verify } from 'hono/jwt';
 import { env } from '../env.ts';
+import { ApiError } from '../lib/errors.ts';
 import type { AppEnv } from '../types.ts';
 
 /**
@@ -10,16 +11,18 @@ import type { AppEnv } from '../types.ts';
 export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   const header = c.req.header('Authorization');
   if (!header?.startsWith('Bearer ')) {
-    return c.json({ error: 'No autorizado: falta el token' }, 401);
+    throw new ApiError(401, 'No autorizado: falta el token');
   }
 
   const token = header.slice('Bearer '.length);
 
+  let payload;
   try {
-    const payload = await verify(token, env.JWT_SECRET, 'HS256');
-    c.set('userId', payload.sub as string);
-    await next();
+    payload = await verify(token, env.JWT_SECRET, 'HS256');
   } catch {
-    return c.json({ error: 'No autorizado: token inválido o expirado' }, 401);
+    throw new ApiError(401, 'No autorizado: token inválido o expirado');
   }
+
+  c.set('userId', payload.sub as string);
+  await next();
 });

@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { and, arrayContains, desc, eq } from 'drizzle-orm';
 import { db } from '../db/client.ts';
 import { garments } from '../db/schema.ts';
+import { validate } from '../lib/validate.ts';
+import { ApiError } from '../lib/errors.ts';
 import { authMiddleware } from '../middleware/auth.ts';
 import { uploadImage, getImageUrl, deleteImage } from '../services/storage.ts';
 import { classifyGarment } from '../services/ai/classify.ts';
@@ -60,13 +61,13 @@ garmentRoutes.post('/upload', async (c) => {
   const file = form.get('image');
 
   if (!(file instanceof File)) {
-    return c.json({ error: 'Falta el archivo "image" (multipart/form-data)' }, 400);
+    throw new ApiError(400, 'Falta el archivo "image" (multipart/form-data)');
   }
   if (!ALLOWED_MIME.has(file.type)) {
-    return c.json({ error: 'Formato no soportado. Usa JPEG, PNG o WebP' }, 415);
+    throw new ApiError(415, 'Formato no soportado. Usa JPEG, PNG o WebP');
   }
   if (file.size > MAX_BYTES) {
-    return c.json({ error: 'La imagen supera el tamaño máximo (8 MB)' }, 413);
+    throw new ApiError(413, 'La imagen supera el tamaño máximo (8 MB)');
   }
 
   const bytes = await file.arrayBuffer();
@@ -84,7 +85,7 @@ garmentRoutes.post('/upload', async (c) => {
 });
 
 // POST /api/v1/garments  -> confirma/crea la prenda en el clóset
-garmentRoutes.post('/', zValidator('json', createSchema), async (c) => {
+garmentRoutes.post('/', validate('json', createSchema), async (c) => {
   const userId = c.get('userId');
   const data = c.req.valid('json');
   const [garment] = await db
@@ -95,7 +96,7 @@ garmentRoutes.post('/', zValidator('json', createSchema), async (c) => {
 });
 
 // GET /api/v1/garments?category=&season=
-garmentRoutes.get('/', zValidator('query', listQuery), async (c) => {
+garmentRoutes.get('/', validate('query', listQuery), async (c) => {
   const userId = c.get('userId');
   const { category, season } = c.req.valid('query');
 
@@ -114,7 +115,7 @@ garmentRoutes.get('/', zValidator('query', listQuery), async (c) => {
 });
 
 // GET /api/v1/garments/:id
-garmentRoutes.get('/:id', zValidator('param', idParam), async (c) => {
+garmentRoutes.get('/:id', validate('param', idParam), async (c) => {
   const userId = c.get('userId');
   const { id } = c.req.valid('param');
   const [garment] = await db
@@ -122,22 +123,22 @@ garmentRoutes.get('/:id', zValidator('param', idParam), async (c) => {
     .from(garments)
     .where(and(eq(garments.id, id), eq(garments.userId, userId)));
 
-  if (!garment) return c.json({ error: 'Prenda no encontrada' }, 404);
+  if (!garment) throw new ApiError(404, 'Prenda no encontrada');
   return c.json({ garment: await withImageUrl(garment) });
 });
 
 // PATCH /api/v1/garments/:id
 garmentRoutes.patch(
   '/:id',
-  zValidator('param', idParam),
-  zValidator('json', updateSchema),
+  validate('param', idParam),
+  validate('json', updateSchema),
   async (c) => {
     const userId = c.get('userId');
     const { id } = c.req.valid('param');
     const data = c.req.valid('json');
 
     if (Object.keys(data).length === 0) {
-      return c.json({ error: 'No hay campos para actualizar' }, 400);
+      throw new ApiError(400, 'No hay campos para actualizar');
     }
 
     const [garment] = await db
@@ -146,13 +147,13 @@ garmentRoutes.patch(
       .where(and(eq(garments.id, id), eq(garments.userId, userId)))
       .returning();
 
-    if (!garment) return c.json({ error: 'Prenda no encontrada' }, 404);
+    if (!garment) throw new ApiError(404, 'Prenda no encontrada');
     return c.json({ garment: await withImageUrl(garment) });
   },
 );
 
 // DELETE /api/v1/garments/:id
-garmentRoutes.delete('/:id', zValidator('param', idParam), async (c) => {
+garmentRoutes.delete('/:id', validate('param', idParam), async (c) => {
   const userId = c.get('userId');
   const { id } = c.req.valid('param');
 
@@ -161,7 +162,7 @@ garmentRoutes.delete('/:id', zValidator('param', idParam), async (c) => {
     .where(and(eq(garments.id, id), eq(garments.userId, userId)))
     .returning();
 
-  if (!deleted) return c.json({ error: 'Prenda no encontrada' }, 404);
+  if (!deleted) throw new ApiError(404, 'Prenda no encontrada');
 
   await deleteImage(deleted.imageKey); // best-effort
   return c.body(null, 204);
