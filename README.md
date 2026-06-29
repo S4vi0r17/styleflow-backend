@@ -16,18 +16,28 @@ bun install
 # 2. Levantar Postgres + MinIO
 docker compose up -d
 
-# 3. Configurar variables de entorno
-cp .env.example .env        # edita JWT_SECRET y, más adelante, GEMINI_API_KEY
+# 3. Crear el bucket de fotos en MinIO (solo la primera vez)
+#    El código no lo crea solo; sin él, /garments/upload falla con NoSuchBucket.
+docker run --rm --network backend_default \
+  -e "MC_HOST_m=http://styleflow:styleflow123@backend-minio-1:9000" \
+  minio/mc mb --ignore-existing m/styleflow-garments
 
-# 4. Crear las tablas en la base de datos
-bun run db:generate         # genera la migración a partir del schema
-bun run db:migrate          # la aplica
+# 4. Configurar variables de entorno
+cp .env.example .env        # edita JWT_SECRET y GEMINI_API_KEY
 
-# 5. Arrancar en modo desarrollo (recarga en caliente)
+# 5. Crear las tablas en la base de datos
+bun run db:push             # aplica el schema directo (desarrollo)
+
+# 6. Arrancar en modo desarrollo (recarga en caliente)
 bun run dev
 ```
 
 La API queda en `http://localhost:3000`.
+
+> **Nota:** el puerto de Postgres es `5435` en el host (mapeado al 5432 del contenedor)
+> para no chocar con otros Postgres locales. La `DATABASE_URL` ya apunta ahí.
+> El bucket de MinIO también puede crearse desde la consola web en `http://localhost:9001`
+> (usuario/clave `styleflow` / `styleflow123`).
 
 ## Scripts
 
